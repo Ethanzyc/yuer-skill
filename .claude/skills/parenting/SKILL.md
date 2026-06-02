@@ -22,16 +22,28 @@ description: >
 
 ## 数据存储
 
-所有用户数据在 `data/` 目录下，JSON 格式。
+所有路径相对于**项目根目录**（即 `yuer-skill/`）。
+
+### 内置知识库（随 skill 更新，不可修改）
+
+| 文件 | 用途 |
+|------|------|
+| `knowledge/index.json` | 内置知识索引（问题映射、书籍索引） |
+| `knowledge/*.md` | 内置知识文章（15个预置调研文档） |
+
+### 用户数据（随使用积累，skill 更新不覆盖）
 
 | 文件 | 用途 |
 |------|------|
 | `data/child-profile.json` | 孩子档案（基本信息、发展、气质、家庭等） |
 | `data/advice-tracking.json` | 建议追踪（策略效果、历史记录、待跟进） |
 | `data/context-journal.json` | 上下文日志（近期事件、活跃问题、季节） |
+| `data/knowledge-index.json` | 用户积累的知识索引 |
+| `data/research/*.md` | 用户积累的知识文章 |
 
-知识库在 `research/` 目录下（markdown 格式）。
-知识索引在 `references/knowledge-index.json`。
+### 知识查找顺序
+
+查找资料时，先查用户知识库（`data/knowledge-index.json`），未命中再查内置知识库（`knowledge/index.json`）。
 
 ## 首次使用检测
 
@@ -58,7 +70,7 @@ description: >
 1. 读 data/child-profile.json  → 检查是否首次使用
 2. 读 data/context-journal.json → 感知当前上下文（近期事件、活跃问题、季节）
 3. 读 data/advice-tracking.json → 查看历史建议效果和待跟进项
-4. 读 references/knowledge-index.json → 快速定位需要的资料
+4. 读 data/knowledge-index.json + knowledge/index.json → 按用户优先合并索引，快速定位资料
 5. 如果有待跟进项 → 先主动回访
 6. 如果有近期事件 → 先确认影响
 7. 进入模式判断
@@ -125,8 +137,8 @@ L2/L3 问题自动记录到 `data/advice-tracking.json`：
 ### guide 模式（日常指导）
 
 1. 执行启动流程
-2. 读 `research/07-developmental-milestones-26-36m.md`（孩子当前月龄部分）
-3. 读 `research/05-play-activities-design.md`
+2. 读 `knowledge/07-developmental-milestones-26-36m.md`（孩子当前月龄部分）
+3. 读 `knowledge/05-play-activities-design.md`
 4. 按以下格式回复：
 
 **【跟进回访】** 如果有待跟进项，先回访上次建议的执行情况。
@@ -148,7 +160,7 @@ L2/L3 问题自动记录到 `data/advice-tracking.json`：
    - 按 ask 模式的问题分层逻辑判断 L1/L2/L3
    - L2/L3 问题记录到 `data/advice-tracking.json`（records + followUps）
    - 更新 `data/context-journal.json` 的 activeProblems
-   - 如果该问题不在 `references/knowledge-index.json` 中，触发知识自检逻辑（调研并补充知识库）
+   - 如果该问题不在 `data/knowledge-index.json` 中，触发知识自检逻辑（调研并补充知识库）
    - 在当次回复末尾附上简要说明：「我注意到你提到了 XX 问题，已经帮你记录，后续会持续跟进。」
 
 ## 上下文管理
@@ -194,7 +206,7 @@ L2/L3 问题自动记录到 `data/advice-tracking.json`：
 
 | 信号 | 说明 | 处理 |
 |------|------|------|
-| 问题不在 knowledge-index.json 中 | 知识库未覆盖 | 需要上网调研，补充知识库 |
+| 问题不在 `data/knowledge-index.json` 中 | 知识库未覆盖 | 需要上网调研，补充知识库 |
 | 策略追踪显示连续无效 | 当前方案不适用 | 调研替代方案 |
 | 医学/健康内容超 12 个月 | 可能过时 | 上网复核，更新来源 |
 | 策略适用月龄与孩子不符 | 超龄或低龄 | 标记降权，寻找适龄方案 |
@@ -202,15 +214,15 @@ L2/L3 问题自动记录到 `data/advice-tracking.json`：
 ### 调研后补充知识库
 
 调研获得的新知识：
-1. 写入 `research/` 目录对应的文件（新建或追加）
-2. 更新 `references/knowledge-index.json` 中的映射
+1. 写入 `data/research/` 目录对应的文件（新建或追加）
+2. 更新 `data/knowledge-index.json` 中的映射
 3. 标注来源、审核日期、适用月龄
 
 ## 深度引用规则
 
 当需要引用某本书的策略时：
 
-1. **先回读原著上下文**：在 `research/` 目录查找该书对应文件，理解策略的完整论述
+1. **先回读原著上下文**：先在 `data/research/` 查找用户积累的文件，未找到再在 `knowledge/` 查找内置文件
 2. **标注适用边界**：说明该策略适用于什么场景、不适用于什么场景
 3. **结合孩子情况判断**：根据气质、策略响应模式筛选和调整
 4. **参考历史效果**：如果该策略之前用过，参考 advice-tracking 中的效果记录

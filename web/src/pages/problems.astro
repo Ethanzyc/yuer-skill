@@ -11,11 +11,24 @@ interface ProblemEntry {
   level: string;
 }
 
-const indexPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../.claude/skills/parenting/references/knowledge-index.json');
+const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..');
+const userIndexPath = path.join(rootDir, 'data/knowledge-index.json');
+const builtInIndexPath = path.join(rootDir, 'knowledge/index.json');
+
 let problems: ProblemEntry[] = [];
 try {
-  const raw = fs.readFileSync(indexPath, 'utf-8');
-  const data = JSON.parse(raw);
+  let data: { problemMap?: ProblemEntry[] } = {};
+  try { data = JSON.parse(fs.readFileSync(userIndexPath, 'utf-8')); } catch {}
+  const userResources = new Set((data.problemMap || []).map(p => p.primaryResource));
+  try {
+    const builtIn = JSON.parse(fs.readFileSync(builtInIndexPath, 'utf-8'));
+    for (const entry of (builtIn.problemMap || [])) {
+      if (!userResources.has(entry.primaryResource)) {
+        data.problemMap = data.problemMap || [];
+        data.problemMap.push(entry);
+      }
+    }
+  } catch {}
   problems = data.problemMap || [];
 } catch {}
 

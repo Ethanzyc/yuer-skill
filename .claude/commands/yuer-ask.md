@@ -12,8 +12,8 @@ allowed-tools: Read, Write, Edit, WebSearch
 2. 读取 data/context-journal.json（感知近期事件、活跃问题，用于上下文感知）
 3. 读取 data/advice-tracking.json（查看同类问题的历史建议和效果）
 4. 如果有待跟进项且与当前问题相关 → 先主动回访
-5. 读取 references/knowledge-index.json 确定问题类型和对应资料
-6. 读取对应的 research 文件中的相关章节（只读相关部分，不读整个文件）
+5. 读取 data/knowledge-index.json 和 knowledge/index.json（用户优先，合并索引）确定问题类型和对应资料
+6. 读取对应的知识文章（先查 data/research/，未找到再查 knowledge/）
 7. 判断问题层级（L1即时/L2习惯/L3发展），按对应模板回复
 
 按照 parenting 技能中 ask 模式的格式生成回复：

@@ -5,28 +5,43 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export function getStaticPaths() {
-  const refDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../.claude/skills/parenting/references');
-  const indexPath = path.join(refDir, 'knowledge-index.json');
-  let slugs: string[] = [];
+  const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..');
+  const resources = new Set<string>();
+
+  // Read user index first
   try {
-    const data = JSON.parse(fs.readFileSync(indexPath, 'utf-8'));
-    const resources = new Set(data.problemMap.map((p: any) => p.primaryResource.replace(/\.md$/, '')));
-    slugs = [...resources];
+    const data = JSON.parse(fs.readFileSync(path.join(rootDir, 'data/knowledge-index.json'), 'utf-8'));
+    for (const p of (data.problemMap || [])) resources.add(p.primaryResource.replace(/\.md$/, ''));
   } catch {}
-  return slugs.map(slug => ({ params: { slug } }));
+
+  // Read built-in index, merge
+  try {
+    const data = JSON.parse(fs.readFileSync(path.join(rootDir, 'knowledge/index.json'), 'utf-8'));
+    for (const p of (data.problemMap || [])) resources.add(p.primaryResource.replace(/\.md$/, ''));
+  } catch {}
+
+  return [...resources].map(slug => ({ params: { slug } }));
 }
 
-const refDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../.claude/skills/parenting/references');
+const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..');
 const { slug } = Astro.params;
-const filePath = path.join(refDir, `${slug}.md`);
+
+// Search user research first, then built-in knowledge
+const searchPaths = [
+  path.join(rootDir, `data/research/${slug}.md`),
+  path.join(rootDir, `knowledge/${slug}.md`),
+];
 
 let content = '';
 let exists = false;
 
-try {
-  content = fs.readFileSync(filePath, 'utf-8');
-  exists = true;
-} catch {}
+for (const filePath of searchPaths) {
+  try {
+    content = fs.readFileSync(filePath, 'utf-8');
+    exists = true;
+    break;
+  } catch {}
+}
 
 function renderMarkdown(md: string): string {
   let html = md
