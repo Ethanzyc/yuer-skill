@@ -4,6 +4,14 @@ AI 驱动的个性化育儿指导系统。通过对话了解你的孩子，建�
 
 基于 [Claude Code](https://claude.ai/code) Skill 构建，开箱即用。
 
+### 界面预览
+
+<p align="center">
+<img src="docs/images/profile.png" width="30%" alt="孩子档案页">
+<img src="docs/images/problems.png" width="30%" alt="问题速查页">
+<img src="docs/images/tracking.png" width="30%" alt="问题追踪页">
+</p>
+
 ## 特点
 
 ### 自我进化系统
