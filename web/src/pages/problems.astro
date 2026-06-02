@@ -1,0 +1,99 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+interface ProblemEntry {
+  keywords: string[];
+  primaryResource: string;
+  section: string;
+  level: string;
+}
+
+const indexPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../.claude/skills/parenting/references/knowledge-index.json');
+let problems: ProblemEntry[] = [];
+try {
+  const raw = fs.readFileSync(indexPath, 'utf-8');
+  const data = JSON.parse(raw);
+  problems = data.problemMap || [];
+} catch {}
+
+const isEmpty = problems.length === 0;
+
+const levelConfig: Record<string, { label: string; color: string }> = {
+  L1: { label: 'L1 即时', color: 'bg-red-100 text-red-700' },
+  L2: { label: 'L2 习惯', color: 'bg-amber-100 text-amber-700' },
+  L3: { label: 'L3 发展', color: 'bg-blue-100 text-blue-700' },
+};
+
+// Group by category (section)
+const grouped = problems.reduce((acc, p) => {
+  const category = p.section || '其他';
+  if (!acc[category]) acc[category] = [];
+  acc[category].push(p);
+  return acc;
+}, {} as Record<string, ProblemEntry[]>);
+
+const categoryOrder = ['情绪与行为', '饮食与营养', '睡眠', '社交发展', '语言', '其他'];
+const sortedCategories = Object.keys(grouped).sort((a, b) => {
+  const ai = categoryOrder.indexOf(a);
+  const bi = categoryOrder.indexOf(b);
+  return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+});
+---
+
+<BaseLayout title="问题速查" currentPath="/problems">
+  {isEmpty ? (
+    <div class="text-center py-20">
+      <div class="w-20 h-20 mx-auto mb-6 bg-[#8D6E63]/10 rounded-full flex items-center justify-center">
+        <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#8D6E63" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>
+        </svg>
+      </div>
+      <h1 class="text-2xl font-bold text-gray-800 mb-3">问题速查</h1>
+      <p class="text-gray-500">知识索引正在建设中。使用 <code class="px-1.5 py-0.5 bg-stone-100 rounded text-xs font-mono">/yuer-ask</code> 提问，系统会自动完善索引。</p>
+    </div>
+  ) : (
+    <div>
+      <h1 class="text-2xl font-bold mb-6">问题速查</h1>
+
+      <!-- Level filter legend -->
+      <div class="flex gap-3 mb-6">
+        {Object.entries(levelConfig).map(([level, config]) => (
+          <span class={`text-xs px-2.5 py-1 rounded-full ${config.color}`}>{config.label}</span>
+        ))}
+      </div>
+
+      <!-- Grouped problems -->
+      <div class="space-y-6">
+        {sortedCategories.map(category => (
+          <div class="bg-white rounded-xl p-5 shadow-sm border border-stone-200">
+            <h2 class="font-semibold text-gray-800 mb-3">{category}</h2>
+            <div class="space-y-3">
+              {grouped[category].map(problem => {
+                const lc = levelConfig[problem.level] || levelConfig.L1;
+                return (
+                  <div class="flex items-start justify-between gap-3">
+                    <div class="flex-1">
+                      <div class="flex flex-wrap gap-1.5">
+                        {problem.keywords.map(kw => (
+                          <span class="text-sm bg-stone-100 text-gray-700 px-2 py-0.5 rounded">{kw}</span>
+                        ))}
+                      </div>
+                      <p class="text-xs text-gray-400 mt-1">
+                        {problem.primaryResource}
+                        {problem.section ? ` > ${problem.section}` : ''}
+                      </p>
+                    </div>
+                    <span class={`text-xs px-2 py-0.5 rounded-full shrink-0 ${lc.color}`}>{lc.label}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )}
+</BaseLayout>

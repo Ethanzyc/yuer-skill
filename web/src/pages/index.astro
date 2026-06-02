@@ -1,0 +1,216 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+interface ChildProfile {
+  child: { name: string; gender: string; birthDate: string; city: string };
+  health: { allergies: string[]; sleepPattern: { bedtime: string; wakeup: string; nap: string }; diet: { milkIntake: string; preferences: string[]; challenges: string[] }; toiletTraining: { started: boolean; notes: string } };
+  development: {
+    grossMotor: { current: string[]; trend: string };
+    fineMotor: { current: string[]; trend: string };
+    language: { current: string[]; trend: string };
+    cognitive: { current: string[]; trend: string };
+    social: { current: string[]; trend: string };
+  };
+  temperament: Record<string, { level: string; evidence: string }>;
+  interests: string[];
+  strategyResponse: { type: string; rating: number; evidence: string }[];
+  family: { caregivers: { role: string; style: string; relationship: string }[] };
+  parentingPhilosophy: { preferredApproach: string; booksReading: string[] };
+  currentConcerns: string[];
+}
+
+const profilePath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../data/child-profile.json');
+let profile: ChildProfile | null = null;
+try {
+  const raw = fs.readFileSync(profilePath, 'utf-8');
+  profile = JSON.parse(raw);
+} catch {}
+
+const isEmpty = !profile || !profile.child.name;
+
+function getAge(birthDate: string): string {
+  if (!birthDate) return '';
+  const birth = new Date(birthDate);
+  const now = new Date();
+  const months = (now.getFullYear() - birth.getFullYear()) * 12 + now.getMonth() - birth.getMonth();
+  const years = Math.floor(months / 12);
+  const remainingMonths = months % 12;
+  if (years > 0) return `${years}岁${remainingMonths > 0 ? remainingMonths + '个月' : ''}`;
+  return `${months}个月`;
+}
+
+function getTrendLabel(trend: string): { text: string; color: string } {
+  const map: Record<string, { text: string; color: string }> = {
+    '进步中': { text: '进步中', color: 'bg-green-100 text-green-700' },
+    '稳定': { text: '稳定', color: 'bg-blue-100 text-blue-700' },
+    '需关注': { text: '需关注', color: 'bg-amber-100 text-amber-700' },
+    '需观察': { text: '需观察', color: 'bg-amber-100 text-amber-700' },
+  };
+  return map[trend] || { text: trend, color: 'bg-gray-100 text-gray-700' };
+}
+
+function getStars(rating: number): string {
+  return '★'.repeat(rating) + '☆'.repeat(5 - rating);
+}
+
+const devLabels: Record<string, string> = {
+  grossMotor: '大运动',
+  fineMotor: '精细动作',
+  language: '语言',
+  cognitive: '认知',
+  social: '社交与情绪',
+};
+---
+
+<BaseLayout title="孩子档案" currentPath="/">
+  {isEmpty ? (
+    <!-- Empty state -->
+    <div class="text-center py-20">
+      <div class="w-20 h-20 mx-auto mb-6 bg-[#8D6E63]/10 rounded-full flex items-center justify-center">
+        <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#8D6E63" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M9 12h.01"/><path d="M15 12h.01"/>
+          <path d="M8 16c1.5 1 3 1 4 1s2.5 0 4-1"/>
+        </svg>
+      </div>
+      <h1 class="text-2xl font-bold text-gray-800 mb-3">开始使用育儿顾问</h1>
+      <p class="text-gray-500 max-w-md mx-auto mb-8">
+        在项目目录下打开 Claude Code，输入 <code class="px-2 py-1 bg-stone-200 rounded text-sm font-mono">/yuer</code> 开始第一次对话。<br/>
+        AI 会通过聊天了解你的孩子，自动建立档案。
+      </p>
+      <div class="inline-block text-left bg-white rounded-xl p-6 shadow-sm border border-stone-200 max-w-sm">
+        <h2 class="font-semibold mb-3 text-sm text-gray-700">快速开始</h2>
+        <ol class="space-y-2 text-sm text-gray-600">
+          <li class="flex gap-2"><span class="font-mono text-[#8D6E63]">1.</span> 在项目根目录打开终端</li>
+          <li class="flex gap-2"><span class="font-mono text-[#8D6E63]">2.</span> 运行 <code class="px-1.5 py-0.5 bg-stone-100 rounded text-xs font-mono">claude</code></li>
+          <li class="flex gap-2"><span class="font-mono text-[#8D6E63]">3.</span> 输入 <code class="px-1.5 py-0.5 bg-stone-100 rounded text-xs font-mono">/yuer</code></li>
+          <li class="flex gap-2"><span class="font-mono text-[#8D6E63]">4.</span> 开始聊天，AI 自动建档</li>
+        </ol>
+      </div>
+    </div>
+  ) : (
+    <!-- Profile display -->
+    <div class="space-y-6">
+      <!-- Header -->
+      <div class="flex items-center gap-4">
+        <div class="w-14 h-14 bg-[#8D6E63] rounded-full flex items-center justify-center text-white text-2xl font-bold">
+          {profile!.child.name.charAt(0)}
+        </div>
+        <div>
+          <h1 class="text-2xl font-bold">{profile!.child.name}</h1>
+          <p class="text-gray-500 text-sm">
+            {profile!.child.gender === '男' ? '男孩' : profile!.child.gender === '女' ? '女孩' : profile!.child.gender}
+            {profile!.child.birthDate ? ` · ${getAge(profile!.child.birthDate)}` : ''}
+            {profile!.child.city ? ` · ${profile!.child.city}` : ''}
+          </p>
+        </div>
+      </div>
+
+      <!-- Development overview -->
+      {Object.entries(profile!.development).map(([key, dev]) => (
+        <div class="bg-white rounded-xl p-5 shadow-sm border border-stone-200">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="font-semibold text-gray-800">{devLabels[key] || key}</h2>
+            {dev.trend && (() => {
+              const t = getTrendLabel(dev.trend);
+              return <span class={`text-xs px-2 py-0.5 rounded-full ${t.color}`}>{t.text}</span>;
+            })()}
+          </div>
+          {dev.current && dev.current.length > 0 ? (
+            <div class="flex flex-wrap gap-2">
+              {dev.current.map((item: string) => (
+                <span class="text-sm bg-stone-100 text-gray-700 px-2.5 py-1 rounded-lg">{item}</span>
+              ))}
+            </div>
+          ) : (
+            <p class="text-sm text-gray-400">暂无记录</p>
+          )}
+        </div>
+      ))}
+
+      <!-- Strategy response -->
+      {profile!.strategyResponse && profile!.strategyResponse.length > 0 && (
+        <div class="bg-white rounded-xl p-5 shadow-sm border border-stone-200">
+          <h2 class="font-semibold text-gray-800 mb-3">策略响应模式</h2>
+          <div class="space-y-3">
+            {profile!.strategyResponse
+              .sort((a, b) => b.rating - a.rating)
+              .map(s => (
+              <div class="flex items-center justify-between">
+                <span class="text-sm text-gray-700">{s.type}</span>
+                <div class="flex items-center gap-2">
+                  <span class="text-amber-500 text-sm tracking-wider">{getStars(s.rating)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <!-- Interests -->
+      {profile!.interests && profile!.interests.length > 0 && (
+        <div class="bg-white rounded-xl p-5 shadow-sm border border-stone-200">
+          <h2 class="font-semibold text-gray-800 mb-3">兴趣偏好</h2>
+          <div class="flex flex-wrap gap-2">
+            {profile!.interests.map((interest: string) => (
+              <span class="text-sm bg-[#8D6E63]/10 text-[#5D4037] px-3 py-1.5 rounded-lg">{interest}</span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <!-- Current concerns -->
+      {profile!.currentConcerns && profile!.currentConcerns.length > 0 && (
+        <div class="bg-white rounded-xl p-5 shadow-sm border border-stone-200">
+          <h2 class="font-semibold text-gray-800 mb-3">当前关注</h2>
+          <ul class="space-y-2">
+            {profile!.currentConcerns.map((concern: string) => (
+              <li class="flex items-start gap-2 text-sm text-gray-700">
+                <span class="mt-1 w-1.5 h-1.5 bg-amber-400 rounded-full shrink-0"></span>
+                {concern}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      <!-- Family ecosystem -->
+      {profile!.family.caregivers && profile!.family.caregivers.length > 0 && (
+        <div class="bg-white rounded-xl p-5 shadow-sm border border-stone-200">
+          <h2 class="font-semibold text-gray-800 mb-3">家庭照顾者</h2>
+          <div class="space-y-3">
+            {profile!.family.caregivers.map((c) => (
+              <div class="flex items-start gap-3">
+                <span class="text-sm font-medium text-gray-800 w-16 shrink-0">{c.role}</span>
+                <div class="text-sm text-gray-600">
+                  {c.style && <span>{c.style}</span>}
+                  {c.relationship && <span class="text-gray-400 ml-1">· {c.relationship}</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <!-- Parenting philosophy -->
+      {(profile!.parentingPhilosophy.preferredApproach || (profile!.parentingPhilosophy.booksReading && profile!.parentingPhilosophy.booksReading.length > 0)) && (
+        <div class="bg-white rounded-xl p-5 shadow-sm border border-stone-200">
+          <h2 class="font-semibold text-gray-800 mb-3">教育理念</h2>
+          <div class="space-y-2 text-sm text-gray-700">
+            {profile!.parentingPhilosophy.preferredApproach && <p>{profile!.parentingPhilosophy.preferredApproach}</p>}
+            {profile!.parentingPhilosophy.booksReading && profile!.parentingPhilosophy.booksReading.length > 0 && (
+              <div class="flex flex-wrap gap-2 mt-2">
+                {profile!.parentingPhilosophy.booksReading.map((book: string) => (
+                  <span class="bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-lg text-xs">{book}</span>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )}
+</BaseLayout>
