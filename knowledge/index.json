@@ -80,7 +80,7 @@
     },
     {
       "keywords": ["绘本", "亲子阅读", "讲故事"],
-      "primaryResource": "16-picture-book-recommendations.md",
+      "primaryResource": "01-parenting-books-guide.md",
       "section": "",
       "level": "L3"
     }
@@ -90,21 +90,21 @@
       "title": "Good Inside (看见孩子)",
       "author": "Dr. Becky Kennedy",
       "coreMethod": "行为是冰山一角，看见行为背后的需求",
-      "resourceFile": "02-parenting-books-deep-dive.md",
+      "resourceFile": "01-parenting-books-guide.md",
       "applicableAge": "0-6岁"
     },
     {
       "title": "1-2-3 Magic (魔法1-2-3)",
       "author": "Thomas Phelan",
       "coreMethod": "温和而坚定的计数管教法",
-      "resourceFile": "02-parenting-books-deep-dive.md",
+      "resourceFile": "01-parenting-books-guide.md",
       "applicableAge": "2-12岁"
     },
     {
       "title": "No Bad Kids (没有坏孩子)",
       "author": "Janet Lansbury",
       "coreMethod": "尊重式管教，接纳情绪+坚定边界",
-      "resourceFile": "02-parenting-books-deep-dive.md",
+      "resourceFile": "01-parenting-books-guide.md",
       "applicableAge": "0-3岁"
     },
     {

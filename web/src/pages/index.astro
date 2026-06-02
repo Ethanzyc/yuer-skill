@@ -1,25 +1,48 @@
 ---
+export const prerender = true;
+
 import BaseLayout from '../layouts/BaseLayout.astro';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 interface ChildProfile {
-  child: { name: string; gender: string; birthDate: string; city: string };
-  health: { allergies: string[]; sleepPattern: { bedtime: string; wakeup: string; nap: string }; diet: { milkIntake: string; preferences: string[]; challenges: string[] }; toiletTraining: { started: boolean; notes: string } };
-  development: {
-    grossMotor: { current: string[]; trend: string };
-    fineMotor: { current: string[]; trend: string };
-    language: { current: string[]; trend: string };
-    cognitive: { current: string[]; trend: string };
-    social: { current: string[]; trend: string };
+  child: {
+    name: string;
+    gender: string;
+    birthDate: string;
+    city: string;
+    personality?: {
+      temperament?: string;
+      interests?: string[];
+      description?: string;
+    };
+    developmentNotes?: string;
   };
-  temperament: Record<string, { level: string; evidence: string }>;
-  interests: string[];
-  strategyResponse: { type: string; rating: number; evidence: string }[];
-  family: { caregivers: { role: string; style: string; relationship: string }[] };
-  parentingPhilosophy: { preferredApproach: string; booksReading: string[] };
-  currentConcerns: string[];
+  health?: {
+    allergies?: string[];
+    sleepPattern?: { bedtime: string; wakeup: string; nap: string };
+    diet?: { preferences?: string[]; challenges?: string[] };
+    notes?: string;
+  };
+  school?: {
+    type: string;
+    schedule: string;
+    notes: string;
+  };
+  siblings?: string[];
+  languageEnv?: string[];
+  family?: {
+    primaryCaregiver?: string;
+    caregivers?: { role: string; time?: string; notes?: string; style?: string; relationship?: string }[];
+    parentingStyle?: string;
+    notes?: string;
+  };
+  strategyResponse?: { strategy?: string; type?: string; rating: number; notes?: string; evidence?: string; evaluatedAt?: string }[];
+  behaviorPatterns?: { topic: string; pattern: string; observedAt: string }[];
+  currentConcerns?: string[];
+  parentingPhilosophy?: { preferredApproach?: string; booksReading?: string[] };
+  lastUpdated?: string;
 }
 
 const profilePath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../data/child-profile.json');
@@ -42,27 +65,11 @@ function getAge(birthDate: string): string {
   return `${months}个月`;
 }
 
-function getTrendLabel(trend: string): { text: string; color: string } {
-  const map: Record<string, { text: string; color: string }> = {
-    '进步中': { text: '进步中', color: 'bg-green-100 text-green-700' },
-    '稳定': { text: '稳定', color: 'bg-blue-100 text-blue-700' },
-    '需关注': { text: '需关注', color: 'bg-amber-100 text-amber-700' },
-    '需观察': { text: '需观察', color: 'bg-amber-100 text-amber-700' },
-  };
-  return map[trend] || { text: trend, color: 'bg-gray-100 text-gray-700' };
-}
-
 function getStars(rating: number): string {
   return '★'.repeat(rating) + '☆'.repeat(5 - rating);
 }
 
-const devLabels: Record<string, string> = {
-  grossMotor: '大运动',
-  fineMotor: '精细动作',
-  language: '语言',
-  cognitive: '认知',
-  social: '社交与情绪',
-};
+const nonEmpty = (arr: string[] | undefined): arr is string[] => Array.isArray(arr) && arr.length > 0;
 ---
 
 <BaseLayout title="孩子档案" currentPath="/">
@@ -92,8 +99,7 @@ const devLabels: Record<string, string> = {
       </div>
     </div>
   ) : (
-    <!-- Profile display -->
-    <div class="space-y-6">
+    <div class="space-y-5">
       <!-- Header -->
       <div class="flex items-center gap-4">
         <div class="w-14 h-14 bg-[#8D6E63] rounded-full flex items-center justify-center text-white text-2xl font-bold">
@@ -109,67 +115,85 @@ const devLabels: Record<string, string> = {
         </div>
       </div>
 
-      <!-- Development overview -->
-      {Object.entries(profile!.development).map(([key, dev]) => (
+      <!-- School & Language row -->
+      {(profile!.school?.type || nonEmpty(profile!.languageEnv) || nonEmpty(profile!.siblings)) && (
         <div class="bg-white rounded-xl p-5 shadow-sm border border-stone-200">
-          <div class="flex items-center justify-between mb-3">
-            <h2 class="font-semibold text-gray-800">{devLabels[key] || key}</h2>
-            {dev.trend && (() => {
-              const t = getTrendLabel(dev.trend);
-              return <span class={`text-xs px-2 py-0.5 rounded-full ${t.color}`}>{t.text}</span>;
-            })()}
-          </div>
-          {dev.current && dev.current.length > 0 ? (
-            <div class="flex flex-wrap gap-2">
-              {dev.current.map((item: string) => (
-                <span class="text-sm bg-stone-100 text-gray-700 px-2.5 py-1 rounded-lg">{item}</span>
-              ))}
-            </div>
-          ) : (
-            <p class="text-sm text-gray-400">暂无记录</p>
-          )}
-        </div>
-      ))}
-
-      <!-- Strategy response -->
-      {profile!.strategyResponse && profile!.strategyResponse.length > 0 && (
-        <div class="bg-white rounded-xl p-5 shadow-sm border border-stone-200">
-          <h2 class="font-semibold text-gray-800 mb-3">策略响应模式</h2>
           <div class="space-y-3">
-            {profile!.strategyResponse
-              .sort((a, b) => b.rating - a.rating)
-              .map(s => (
-              <div class="flex items-center justify-between">
-                <span class="text-sm text-gray-700">{s.type}</span>
-                <div class="flex items-center gap-2">
-                  <span class="text-amber-500 text-sm tracking-wider">{getStars(s.rating)}</span>
+            {profile!.school?.type && (
+              <div class="flex items-start gap-3">
+                <span class="text-sm text-gray-500 w-20 shrink-0">托班/园所</span>
+                <span class="text-sm text-gray-800">{profile!.school.type}{profile!.school.schedule ? `（${profile!.school.schedule}）` : ''}</span>
+              </div>
+            )}
+            {nonEmpty(profile!.languageEnv) && (
+              <div class="flex items-start gap-3">
+                <span class="text-sm text-gray-500 w-20 shrink-0">语言环境</span>
+                <div class="flex flex-wrap gap-1.5">
+                  {profile!.languageEnv!.map((lang: string) => (
+                    <span class="text-sm bg-blue-50 text-blue-700 px-2 py-0.5 rounded">{lang}</span>
+                  ))}
                 </div>
               </div>
-            ))}
+            )}
+            {nonEmpty(profile!.siblings) && (
+              <div class="flex items-start gap-3">
+                <span class="text-sm text-gray-500 w-20 shrink-0">兄弟姐妹</span>
+                <span class="text-sm text-gray-800">{profile!.siblings!.join('、')}</span>
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      <!-- Interests -->
-      {profile!.interests && profile!.interests.length > 0 && (
+      <!-- Health -->
+      {(nonEmpty(profile!.health?.allergies) || profile!.health?.sleepPattern?.bedtime || nonEmpty(profile!.health?.diet?.challenges) || profile!.health?.notes) && (
         <div class="bg-white rounded-xl p-5 shadow-sm border border-stone-200">
-          <h2 class="font-semibold text-gray-800 mb-3">兴趣偏好</h2>
-          <div class="flex flex-wrap gap-2">
-            {profile!.interests.map((interest: string) => (
-              <span class="text-sm bg-[#8D6E63]/10 text-[#5D4037] px-3 py-1.5 rounded-lg">{interest}</span>
-            ))}
+          <h2 class="font-semibold text-gray-800 mb-3">健康信息</h2>
+          <div class="space-y-3">
+            {nonEmpty(profile!.health!.allergies) && (
+              <div class="flex items-start gap-3">
+                <span class="text-sm text-red-500 w-20 shrink-0 font-medium">过敏/禁忌</span>
+                <div class="flex flex-wrap gap-1.5">
+                  {profile!.health!.allergies!.map((a: string) => (
+                    <span class="text-sm bg-red-50 text-red-700 px-2 py-0.5 rounded">{a}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {profile!.health!.sleepPattern?.bedtime && (
+              <div class="flex items-start gap-3">
+                <span class="text-sm text-gray-500 w-20 shrink-0">睡眠</span>
+                <span class="text-sm text-gray-700">
+                  {profile!.health!.sleepPattern.bedtime} 睡 → {profile!.health!.sleepPattern.wakeup} 起
+                  {profile!.health!.sleepPattern.nap ? ` · 午觉 ${profile!.health!.sleepPattern.nap}` : ''}
+                </span>
+              </div>
+            )}
+            {nonEmpty(profile!.health!.diet?.challenges) && (
+              <div class="flex items-start gap-3">
+                <span class="text-sm text-gray-500 w-20 shrink-0">饮食挑战</span>
+                <div class="flex flex-wrap gap-1.5">
+                  {profile!.health!.diet!.challenges!.map((c: string) => (
+                    <span class="text-sm bg-amber-50 text-amber-700 px-2 py-0.5 rounded">{c}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {profile!.health!.notes && (
+              <p class="text-sm text-gray-600 pl-[5.25rem]">{profile!.health!.notes}</p>
+            )}
           </div>
         </div>
       )}
 
       <!-- Current concerns -->
-      {profile!.currentConcerns && profile!.currentConcerns.length > 0 && (
+      {nonEmpty(profile!.currentConcerns) && (
         <div class="bg-white rounded-xl p-5 shadow-sm border border-stone-200">
           <h2 class="font-semibold text-gray-800 mb-3">当前关注</h2>
           <ul class="space-y-2">
-            {profile!.currentConcerns.map((concern: string) => (
+            {profile!.currentConcerns!.map((concern: string) => (
               <li class="flex items-start gap-2 text-sm text-gray-700">
-                <span class="mt-1 w-1.5 h-1.5 bg-amber-400 rounded-full shrink-0"></span>
+                <span class="mt-1.5 w-1.5 h-1.5 bg-amber-400 rounded-full shrink-0"></span>
                 {concern}
               </li>
             ))}
@@ -177,17 +201,42 @@ const devLabels: Record<string, string> = {
         </div>
       )}
 
-      <!-- Family ecosystem -->
-      {profile!.family.caregivers && profile!.family.caregivers.length > 0 && (
+      <!-- Personality & Interests -->
+      {(profile!.child.personality?.temperament || nonEmpty(profile!.child.personality?.interests) || profile!.child.personality?.description) && (
+        <div class="bg-white rounded-xl p-5 shadow-sm border border-stone-200">
+          <h2 class="font-semibold text-gray-800 mb-3">气质与兴趣</h2>
+          <div class="space-y-3">
+            {profile!.child.personality!.temperament && (
+              <p class="text-sm text-gray-700">{profile!.child.personality!.temperament}</p>
+            )}
+            {nonEmpty(profile!.child.personality!.interests) && (
+              <div class="flex flex-wrap gap-2">
+                {profile!.child.personality!.interests!.map((interest: string) => (
+                  <span class="text-sm bg-[#8D6E63]/10 text-[#5D4037] px-3 py-1.5 rounded-lg">{interest}</span>
+                ))}
+              </div>
+            )}
+            {profile!.child.personality!.description && (
+              <p class="text-sm text-gray-500">{profile!.child.personality!.description}</p>
+            )}
+          </div>
+        </div>
+      )}
+
+      <!-- Family -->
+      {(profile!.family?.primaryCaregiver || nonEmpty(profile!.family?.caregivers)) && (
         <div class="bg-white rounded-xl p-5 shadow-sm border border-stone-200">
           <h2 class="font-semibold text-gray-800 mb-3">家庭照顾者</h2>
           <div class="space-y-3">
-            {profile!.family.caregivers.map((c) => (
+            {profile!.family!.primaryCaregiver && (
+              <p class="text-sm text-gray-500">主要照顾者：{profile!.family!.primaryCaregiver}</p>
+            )}
+            {profile!.family!.caregivers && profile!.family!.caregivers.map((c) => (
               <div class="flex items-start gap-3">
                 <span class="text-sm font-medium text-gray-800 w-16 shrink-0">{c.role}</span>
                 <div class="text-sm text-gray-600">
-                  {c.style && <span>{c.style}</span>}
-                  {c.relationship && <span class="text-gray-400 ml-1">· {c.relationship}</span>}
+                  {c.time && <span class="text-gray-400">{c.time} · </span>}
+                  {c.notes || c.style || ''}
                 </div>
               </div>
             ))}
@@ -195,21 +244,71 @@ const devLabels: Record<string, string> = {
         </div>
       )}
 
+      <!-- Strategy response -->
+      {nonEmpty(profile!.strategyResponse) && (
+        <div class="bg-white rounded-xl p-5 shadow-sm border border-stone-200">
+          <h2 class="font-semibold text-gray-800 mb-3">策略响应模式</h2>
+          <div class="space-y-3">
+            {profile!.strategyResponse!
+              .sort((a, b) => b.rating - a.rating)
+              .map(s => (
+              <div>
+                <div class="flex items-center justify-between">
+                  <span class="text-sm text-gray-700">{s.strategy || s.type}</span>
+                  <span class="text-amber-500 text-sm tracking-wider">{getStars(s.rating)}</span>
+                </div>
+                {(s.notes || s.evidence) && (
+                  <p class="text-xs text-gray-400 mt-1">{s.notes || s.evidence}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <!-- Behavior patterns -->
+      {nonEmpty(profile!.behaviorPatterns) && (
+        <div class="bg-white rounded-xl p-5 shadow-sm border border-stone-200">
+          <h2 class="font-semibold text-gray-800 mb-3">行为模式</h2>
+          <div class="space-y-3">
+            {profile!.behaviorPatterns!.map((bp) => (
+              <div>
+                <span class="text-sm font-medium text-gray-700">{bp.topic}</span>
+                <p class="text-sm text-gray-600 mt-0.5">{bp.pattern}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <!-- Parenting philosophy -->
-      {(profile!.parentingPhilosophy.preferredApproach || (profile!.parentingPhilosophy.booksReading && profile!.parentingPhilosophy.booksReading.length > 0)) && (
+      {profile!.parentingPhilosophy && (profile!.parentingPhilosophy.preferredApproach || nonEmpty(profile!.parentingPhilosophy.booksReading)) && (
         <div class="bg-white rounded-xl p-5 shadow-sm border border-stone-200">
           <h2 class="font-semibold text-gray-800 mb-3">教育理念</h2>
           <div class="space-y-2 text-sm text-gray-700">
             {profile!.parentingPhilosophy.preferredApproach && <p>{profile!.parentingPhilosophy.preferredApproach}</p>}
-            {profile!.parentingPhilosophy.booksReading && profile!.parentingPhilosophy.booksReading.length > 0 && (
+            {nonEmpty(profile!.parentingPhilosophy.booksReading) && (
               <div class="flex flex-wrap gap-2 mt-2">
-                {profile!.parentingPhilosophy.booksReading.map((book: string) => (
+                {profile!.parentingPhilosophy.booksReading!.map((book: string) => (
                   <span class="bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-lg text-xs">{book}</span>
                 ))}
               </div>
             )}
           </div>
         </div>
+      )}
+
+      <!-- Development notes (fallback when no structured data) -->
+      {profile!.child.developmentNotes && (
+        <div class="bg-white rounded-xl p-5 shadow-sm border border-stone-200">
+          <h2 class="font-semibold text-gray-800 mb-3">发展观察</h2>
+          <p class="text-sm text-gray-700">{profile!.child.developmentNotes}</p>
+        </div>
+      )}
+
+      <!-- Last updated -->
+      {profile!.lastUpdated && (
+        <p class="text-xs text-gray-400 text-center">最后更新：{profile!.lastUpdated}</p>
       )}
     </div>
   )}

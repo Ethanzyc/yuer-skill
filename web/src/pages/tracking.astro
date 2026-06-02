@@ -1,4 +1,6 @@
 ---
+export const prerender = true;
+
 import BaseLayout from '../layouts/BaseLayout.astro';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -7,13 +9,15 @@ import { fileURLToPath } from 'node:url';
 interface TrackingRecord {
   id: string;
   date: string;
-  problem: string;
+  topic: string;
   level: string;
-  strategy: string;
-  source: string;
-  difficulty: string;
-  expectedTimeline: string;
-  status: string;
+  problemContext: string;
+  strategiesSuggested: string[];
+  sources: string[];
+  followUpDate?: string;
+  status?: string;
+  difficulty?: string;
+  expectedTimeline?: string;
   outcome?: string;
   childReaction?: string;
   parentFeedback?: string;
@@ -21,18 +25,19 @@ interface TrackingRecord {
 
 interface FollowUp {
   id: string;
-  date: string;
-  problem: string;
-  followUpQuestion: string;
+  recordId: string;
+  topic: string;
+  questionToAsk: string;
+  dueDate: string;
   status: string;
 }
 
 interface StrategySummary {
-  type: string;
-  uses: number;
-  effective: number;
-  partial: number;
-  ineffective: number;
+  strategy: string;
+  usageCount: number;
+  averageEffectiveness: number | null;
+  lastUsed: string;
+  source: string;
 }
 
 interface AdviceTracking {
@@ -67,10 +72,6 @@ const pendingFollowUps = tracking.followUps?.filter(f => f.status === 'pending')
 const sortedRecords = [...(tracking.records || [])].sort((a, b) =>
   new Date(b.date).getTime() - new Date(a.date).getTime()
 );
-
-function getMaxUses(summary: StrategySummary[]): number {
-  return Math.max(...summary.map(s => s.uses), 1);
-}
 ---
 
 <BaseLayout title="问题追踪" currentPath="/tracking">
@@ -96,10 +97,10 @@ function getMaxUses(summary: StrategySummary[]): number {
             {pendingFollowUps.map(fu => (
               <div class="bg-white rounded-lg p-3 border border-amber-100">
                 <div class="flex items-center justify-between mb-1">
-                  <span class="text-sm font-medium text-gray-800">{fu.problem}</span>
-                  <span class="text-xs text-gray-400">{fu.date}</span>
+                  <span class="text-sm font-medium text-gray-800">{fu.topic}</span>
+                  <span class="text-xs text-gray-400">{fu.dueDate}</span>
                 </div>
-                <p class="text-sm text-gray-600">{fu.followUpQuestion}</p>
+                <p class="text-sm text-gray-600">{fu.questionToAsk}</p>
               </div>
             ))}
           </div>
@@ -109,38 +110,18 @@ function getMaxUses(summary: StrategySummary[]): number {
       <!-- Strategy effectiveness -->
       {tracking.strategySummary && tracking.strategySummary.length > 0 && (
         <div class="bg-white rounded-xl p-5 shadow-sm border border-stone-200">
-          <h2 class="font-semibold text-gray-800 mb-4">策略效果汇总</h2>
+          <h2 class="font-semibold text-gray-800 mb-4">策略使用汇总</h2>
           <div class="space-y-3">
-            {tracking.strategySummary.map(s => {
-              const maxBar = getMaxUses(tracking.strategySummary);
-              const total = s.effective + s.partial + s.ineffective;
-              return (
-                <div>
-                  <div class="flex items-center justify-between mb-1">
-                    <span class="text-sm text-gray-700">{s.type}</span>
-                    <span class="text-xs text-gray-400">使用 {s.uses} 次</span>
-                  </div>
-                  <div class="flex h-3 rounded-full overflow-hidden bg-gray-100">
-                    {s.effective > 0 && (
-                      <div class="bg-green-500" style={`width: ${(s.effective / maxBar) * 100}%`}></div>
-                    )}
-                    {s.partial > 0 && (
-                      <div class="bg-amber-400" style={`width: ${(s.partial / maxBar) * 100}%`}></div>
-                    )}
-                    {s.ineffective > 0 && (
-                      <div class="bg-red-400" style={`width: ${(s.ineffective / maxBar) * 100}%`}></div>
-                    )}
-                  </div>
-                  {total > 0 && (
-                    <div class="flex gap-3 mt-1 text-xs text-gray-400">
-                      <span class="text-green-600">有效 {s.effective}</span>
-                      <span class="text-amber-600">部分 {s.partial}</span>
-                      <span class="text-red-600">无效 {s.ineffective}</span>
-                    </div>
-                  )}
+            {tracking.strategySummary.map(s => (
+              <div class="border-b border-stone-100 pb-3 last:border-0 last:pb-0">
+                <div class="flex items-center justify-between mb-1">
+                  <span class="text-sm text-gray-700">{s.strategy}</span>
+                  <span class="text-xs text-gray-400">使用 {s.usageCount} 次</span>
                 </div>
-              );
-            })}
+                {s.source && <p class="text-xs text-gray-400">来源：{s.source}</p>}
+                <p class="text-xs text-gray-400">最近使用：{s.lastUsed}</p>
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -158,18 +139,29 @@ function getMaxUses(summary: StrategySummary[]): number {
                   <div class="flex items-center justify-between mb-2">
                     <div class="flex items-center gap-2">
                       <span class={`text-xs px-2 py-0.5 rounded-full ${lc.color}`}>{lc.label}</span>
-                      <span class="text-sm font-medium text-gray-800">{record.problem}</span>
+                      <span class="text-sm font-medium text-gray-800">{record.topic}</span>
                     </div>
                     <div class="flex items-center gap-2">
                       <span class="text-xs text-gray-400">{record.date}</span>
-                      <span class={`text-xs px-2 py-0.5 rounded-full ${sc.color}`}>{sc.label}</span>
+                      {record.status && <span class={`text-xs px-2 py-0.5 rounded-full ${sc.color}`}>{sc.label}</span>}
                     </div>
                   </div>
                   <div class="text-sm text-gray-600 space-y-1 ml-1">
-                    <p>策略：<span class="text-gray-800">{record.strategy}</span></p>
-                    {record.source && <p class="text-gray-400">来源：{record.source}</p>}
-                    {record.difficulty && <p class="text-gray-400">难度：{record.difficulty}</p>}
-                    {record.expectedTimeline && <p class="text-gray-400">预期见效：{record.expectedTimeline}</p>}
+                    <p class="text-gray-500">{record.problemContext}</p>
+                    {record.strategiesSuggested && record.strategiesSuggested.length > 0 && (
+                      <div class="mt-2">
+                        <p class="text-gray-700 font-medium mb-1">建议策略：</p>
+                        <ul class="list-disc list-inside space-y-0.5">
+                          {record.strategiesSuggested.map((s: string) => (
+                            <li class="text-gray-600">{s}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {record.sources && record.sources.length > 0 && (
+                      <p class="text-gray-400 text-xs mt-1">来源：{record.sources.join('、')}</p>
+                    )}
+                    {record.followUpDate && <p class="text-gray-400 text-xs">计划跟进：{record.followUpDate}</p>}
                     {record.outcome && <p class="text-green-700">结果：{record.outcome}</p>}
                   </div>
                 </div>

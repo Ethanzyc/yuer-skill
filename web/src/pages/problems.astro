@@ -1,4 +1,6 @@
 ---
+export const prerender = true;
+
 import BaseLayout from '../layouts/BaseLayout.astro';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -11,7 +13,7 @@ interface ProblemEntry {
   level: string;
 }
 
-const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..');
+const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 const userIndexPath = path.join(rootDir, 'data/knowledge-index.json');
 const builtInIndexPath = path.join(rootDir, 'knowledge/index.json');
 

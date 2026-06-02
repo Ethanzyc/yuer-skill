@@ -1,6 +1,8 @@
 # 育儿顾问 Skill
 
-AI 驱动的个性化育儿指导系统，基于 [Claude Code](https://claude.ai/code) Skill 构建。通过对话了解你的孩子，建立专属档案，提供循证、个性化的育儿建议。
+AI 驱动的个性化育儿指导系统。通过对话了解你的孩子，建立专属档案，提供循证、个性化的育儿建议。
+
+基于 [Claude Code](https://claude.ai/code) Skill 构建，开箱即用。
 
 ## 亮点
 
@@ -33,7 +35,7 @@ AI 驱动的个性化育儿指导系统，基于 [Claude Code](https://claude.ai
 | 医学内容超过 12 个月 | 健康类信息可能已过时，需要复核 |
 | 策略适用月龄不匹配 | 孩子长大了，某些策略已不适合当前阶段 |
 
-调研获得的新知识自动写入 `research/` 目录并更新索引，下次遇到同类问题直接引用。
+调研获得的新知识自动写入 `data/research/` 目录并更新索引，下次遇到同类问题直接引用。
 
 ### 深度引用，不断章取义
 
@@ -52,7 +54,7 @@ AI 驱动的个性化育儿指导系统，基于 [Claude Code](https://claude.ai
 
 ### 前提条件
 
-- [Claude Code](https://claude.ai/code) CLI 已安装（参考[官方文档](https://docs.anthropic.com/en/docs/claude-code)）
+- [Claude Code](https://claude.ai/code) 已安装（参考[官方文档](https://docs.anthropic.com/en/docs/claude-code)）
 - Node.js 18+（Web 可视化页面需要）
 
 ### 快速开始
@@ -96,7 +98,27 @@ cd web && npm run dev
 
 ## 知识库
 
-内置基于 6 本经典育儿书的精读笔记：
+### 内置知识库（knowledge/）
+
+随项目更新，覆盖 2-3 岁育儿常见场景的循证资料：
+
+| 文件 | 主题 |
+|------|------|
+| 01-parenting-books-guide.md | 6 本经典育儿书精读笔记 |
+| 03-problem-navigation.md | 育儿问题导航手册（情绪、行为、沟通、安全感等） |
+| 05-play-activities-design.md | 2-3 岁游戏活动设计方案 |
+| 06-screen-time-evidence.md | 屏幕时间循证指南 |
+| 07-developmental-milestones-26-36m.md | 26-36 月龄发育里程碑参考 |
+| 08-nutrition-health-guide.md | 营养健康指南 |
+| 09-pacifier-weaning-guide.md | 戒奶嘴专题指南 |
+| 10-toilet-training-guide.md | 如厕训练专题指南 |
+| 11-fear-desensitization-guide.md | 恐惧脱敏专题指南 |
+| 12-playful-parenting-deep-dive.md | 《游戏力》深度解读 |
+| 13-discipline-approaches-comparison.md | 管教方法横向比较 |
+| 14-no-drama-discipline-and-how-to-talk-deep-dive.md | 《去情绪化管教》+《如何说》深度解读 |
+| 15-strategy-deep-context.md | 策略深度上下文 |
+
+引用的 6 本核心育儿书：
 
 | 书名 | 核心方法 | 适用年龄 |
 |------|---------|---------|
@@ -107,14 +129,12 @@ cd web && npm run dev
 | 去情绪化管教（No-Drama Discipline） | 全脑教养，先连接再引导 | 0-6 岁 |
 | 如何说孩子才会听 | 共情沟通技巧，代替命令和指责 | 2-12 岁 |
 
-### 自定义知识库
+### 用户知识库（data/research/）
 
-你可以根据自己的育儿偏好维护知识库：
+你积累的知识自动存放在这里：
 
-- **添加新书**：在 `research/` 目录新建 Markdown 文件，把读书笔记放进去
-- **更新索引**：在 `references/knowledge-index.json` 的 `bookIndex` 中添加新书条目
-- **添加问题映射**：在 `knowledge-index.json` 的 `problemMap` 中添加关键词到资料的映射
-- **添加专题指南**：参考 `research/` 中现有文件（如戒奶嘴、如厕训练），创建新的专题指南
+- AI 调研获得的新知识 → 自动写入 `data/research/`
+- 你手动添加的读书笔记 → 放入 `data/research/`，更新 `data/knowledge-index.json`
 
 知识库是纯 Markdown/JSON，无需编程，用任何文本编辑器都能维护。
 
@@ -127,6 +147,8 @@ cd web && npm run dev
 | `data/child-profile.json` | 孩子档案（基本信息、发展、气质、家庭） | 对话中自动收集 |
 | `data/advice-tracking.json` | 建议追踪（策略效果、历史记录、待跟进） | 给建议时自动记录 |
 | `data/context-journal.json` | 上下文日志（近期事件、活跃问题） | 对话中自动更新 |
+| `data/knowledge-index.json` | 用户积累的知识索引 | 调研时自动更新 |
+| `data/research/` | 用户积累的知识文章 | 调研时自动创建 |
 
 ### 数据自动维护
 
@@ -134,31 +156,46 @@ cd web && npm run dev
 - 活跃问题不超过 5 条，已解决的及时移除
 - 建议记录超过 100 条时自动归档旧记录
 
+## 关于不同模型的效果差异
+
+本项目基于 Claude Code Skill 机制构建，不同底层模型的能力和风格会影响使用体验。即使都在 Claude Code 中运行，不同模型版本在复杂上下文处理、策略追踪等环节的表现也可能不同。
+
+如果遇到 AI 回复不符合预期的情况，可以尝试：
+- 重新描述你的问题，给出更多上下文
+- 直接让 AI 读取相关文件后重新回答
+- 在本项目中手动修正数据文件
+
+## 反馈与联系
+
+- **Bug / 问题**：[提交 Issue](https://github.com/Ethanzyc/yuer-skill/issues)
+- **功能建议**：同样通过 Issue 提出，欢迎描述你想要的功能场景
+- **微信交流**：ADJITLH（备注"育儿 Skill"）
+
 ## 目录结构
 
 ```
 ├── .claude/
-│   ├── skills/parenting/
-│   │   ├── SKILL.md                    # Skill 核心逻辑
-│   │   └── references/
-│   │       └── knowledge-index.json    # 问题→资料映射 + 书籍索引
-│   └── commands/
-│       ├── yuer.md                     # /yuer 命令
-│       └── yuer-ask.md                 # /yuer-ask 命令
-├── data/                               # 用户数据（gitignore）
-│   ├── child-profile.json
-│   ├── advice-tracking.json
-│   └── context-journal.json
-├── research/                           # 内置知识库
-├── web/                                # Astro 可视化页面
-├── SETUP.md
+│   └── skills/parenting/
+│       ├── SKILL.md                 # Skill 核心逻辑
+│       └── data-schemas.md          # JSON 数据结构参考
+├── knowledge/                        # 内置知识库（随 skill 更新）
+│   ├── index.json                    # 内置知识索引
+│   └── *.md                          # 13 个预置调研文档
+├── data/                             # 用户数据（gitignore）
+│   ├── child-profile.json            # 孩子档案
+│   ├── advice-tracking.json          # 建议追踪
+│   ├── context-journal.json          # 上下文日志
+│   ├── knowledge-index.json          # 用户知识索引
+│   └── research/                     # 用户积累的知识文章
+├── web/                              # Astro 可视化页面
+│   └── src/pages/                    # 档案/问题速查/追踪页面
 └── README.md
 ```
 
 ## 技术栈
 
-- **Skill**：Claude Code Custom Skill（SKILL.md + 命令文件）
-- **数据**：JSON（AI 自动读写）
+- **Skill**：Claude Code Custom Skill
+- **数据**：JSON（AI 自动读写，结构规范见 `data-schemas.md`）
 - **知识库**：Markdown
 - **Web**：Astro 5 + Tailwind CSS v4（纯静态，无 SSR）
 

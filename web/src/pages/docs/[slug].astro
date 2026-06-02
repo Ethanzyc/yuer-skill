@@ -4,25 +4,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export function getStaticPaths() {
-  const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..');
-  const resources = new Set<string>();
-
-  // Read user index first
-  try {
-    const data = JSON.parse(fs.readFileSync(path.join(rootDir, 'data/knowledge-index.json'), 'utf-8'));
-    for (const p of (data.problemMap || [])) resources.add(p.primaryResource.replace(/\.md$/, ''));
-  } catch {}
-
-  // Read built-in index, merge
-  try {
-    const data = JSON.parse(fs.readFileSync(path.join(rootDir, 'knowledge/index.json'), 'utf-8'));
-    for (const p of (data.problemMap || [])) resources.add(p.primaryResource.replace(/\.md$/, ''));
-  } catch {}
-
-  return [...resources].map(slug => ({ params: { slug } }));
-}
-
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..');
 const { slug } = Astro.params;
 
@@ -43,26 +24,66 @@ for (const filePath of searchPaths) {
   } catch {}
 }
 
-function renderMarkdown(md: string): string {
-  let html = md
-    .replace(/^### (.+)$/gm, '<h3 class="text-lg font-semibold text-gray-800 mt-6 mb-2">$1</h3>')
-    .replace(/^## (.+)$/gm, '<h2 class="text-xl font-bold text-gray-800 mt-8 mb-3">$1</h2>')
-    .replace(/^# (.+)$/gm, '<h1 class="text-2xl font-bold text-gray-900 mb-4">$1</h1>')
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    .replace(/^- (.+)$/gm, '<li class="ml-4 list-disc text-gray-700">$1</li>')
-    .replace(/^> (.+)$/gm, '<blockquote class="border-l-4 border-[#8D6E63] pl-4 py-1 my-3 bg-[#8D6E63]/5 text-gray-700 italic">$1</blockquote>')
-    .replace(/\n{2,}/g, '<br/><br/>')
-    .replace(/\n/g, '<br/>');
+const MarkdownIt = (await import('markdown-it')).default;
+const md = new MarkdownIt({ html: true, linkify: true, breaks: true });
 
-  // Wrap consecutive <li> in <ul>
-  html = html.replace(/((?:<li[^>]*>.*?<\/li><br\/?>)+)/g, (match) => {
-    const items = match.replace(/<br\/?>/g, '');
-    return `<ul class="my-2 space-y-1">${items}</ul>`;
-  });
+const slugify = (text) => text
+  .replace(/ \/ /g, '--')
+  .replace(/[^\w一-鿿\s-]/g, '')
+  .trim()
+  .replace(/ +/g, '-')
+  .replace(/^-+|-+$/g, '');
 
-  return html;
-}
+md.renderer.rules.heading_open = (tokens, idx) => {
+  const level = tokens[idx].tag;
+  const sizes = { h1: 'text-2xl font-bold text-gray-900 mb-4', h2: 'text-xl font-bold text-gray-800 mt-8 mb-3', h3: 'text-lg font-semibold text-gray-800 mt-6 mb-2' };
+  const next = tokens[idx + 1];
+  const raw = (next && next.type === 'inline')
+    ? (next.children || []).filter(c => c.type === 'text').map(c => c.content).join('') || next.content
+    : '';
+  const id = raw ? ` id="${slugify(raw)}"` : '';
+  return `<${level}${id} class="${sizes[level] || 'text-base font-semibold text-gray-800 mt-4 mb-2'}">`;
+};
+md.renderer.rules.paragraph_open = () => '<p class="text-gray-700 my-2 leading-relaxed">';
+md.renderer.rules.blockquote_open = () => '<blockquote class="border-l-4 border-[#8D6E63] pl-4 py-2 my-3 bg-[#8D6E63]/5 text-gray-700 italic">';
+md.renderer.rules.bullet_list_open = () => '<ul class="my-2 space-y-1 list-disc ml-6 text-gray-700">';
+md.renderer.rules.ordered_list_open = () => '<ol class="my-2 space-y-1 list-decimal ml-6 text-gray-700">';
+md.renderer.rules.strong_open = () => '<strong class="font-semibold text-gray-900">';
+md.renderer.rules.em_open = () => '<em>';
+md.renderer.rules.link_open = (tokens, idx, options, _env, self) => {
+  tokens[idx].attrSet('class', 'text-[#8D6E63] hover:underline');
+  return self.renderToken(tokens, idx, options);
+};
+md.renderer.rules.hr = () => '<hr class="my-6 border-stone-200"/>';
+md.renderer.rules.fence = (tokens, idx) => {
+  const lang = tokens[idx].info?.trim();
+  const text = tokens[idx].content;
+  if (lang === 'mermaid') {
+    return `<div class="my-4 p-4 bg-stone-50 rounded-lg border border-stone-200"><div class="mermaid">${text}</div></div>`;
+  }
+  const langAttr = lang ? ` class="language-${lang}"` : '';
+  return `<pre class="my-4 p-4 bg-stone-800 text-stone-100 rounded-lg overflow-x-auto text-sm"><code${langAttr}>${text}</code></pre>`;
+};
+md.renderer.rules.code_block = (tokens, idx) => {
+  return `<pre class="my-4 p-4 bg-stone-800 text-stone-100 rounded-lg overflow-x-auto text-sm"><code>${tokens[idx].content}</code></pre>`;
+};
+md.renderer.rules.code_inline = (tokens, idx) => {
+  return `<code class="px-1.5 py-0.5 bg-stone-100 rounded text-xs font-mono text-gray-800">${tokens[idx].content}</code>`;
+};
+md.renderer.rules.table_open = () => '<div class="overflow-x-auto my-4"><table class="w-full text-sm border-collapse">';
+md.renderer.rules.table_close = () => '</table></div>';
+md.renderer.rules.thead_open = () => '<thead>';
+md.renderer.rules.thead_close = () => '</thead>';
+md.renderer.rules.tbody_open = () => '<tbody>';
+md.renderer.rules.tbody_close = () => '</tbody>';
+md.renderer.rules.tr_open = (tokens, idx) => {
+  const inHead = idx > 0 && tokens[idx - 1].type === 'thead_open';
+  return inHead ? '<tr class="border-b-2 border-stone-200">' : '<tr class="border-b border-stone-100">';
+};
+md.renderer.rules.th_open = () => '<th class="px-3 py-2 text-left text-sm font-medium text-gray-800">';
+md.renderer.rules.td_open = () => '<td class="px-3 py-2 text-gray-700">';
+
+const htmlContent = md.render(content);
 ---
 
 <BaseLayout title={exists ? slug.replace(/^\d+-/, '') : '文档未找到'} currentPath="/problems">
@@ -73,8 +94,16 @@ function renderMarkdown(md: string): string {
         返回问题速查
       </a>
       <article class="prose prose-stone max-w-none bg-white rounded-xl p-6 shadow-sm border border-stone-200">
-        <Fragment set:html={renderMarkdown(content)} />
+        <Fragment set:html={htmlContent} />
       </article>
+      {htmlContent.includes('class="mermaid"') && (
+        <script is:inline>
+          import('https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs').then(m => {
+            m.default.initialize({ startOnLoad: false, theme: 'neutral' });
+            m.default.run({ querySelector: '.mermaid' });
+          });
+        </script>
+      )}
     </div>
   ) : (
     <div class="text-center py-20">
