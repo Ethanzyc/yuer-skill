@@ -20,3 +20,10 @@ allowed-tools: Read, Write, Edit, WebSearch
 - 【发展观察】可以观察的一个发展指标，与活跃问题关联
 - 【育儿小贴士】一条来自书籍的实用技巧
 - 【主动提醒】月龄发展提醒 / 追踪跟进提醒 / 季节提醒（如有）
+
+8. 如果对话中用户提到了新的育儿问题或困扰，执行 guide 模式的"问题捕获"步骤：
+   - 按 ask 模式分层判断 L1/L2/L3
+   - L2/L3 问题写入 `data/advice-tracking.json`（records + followUps）
+   - 更新 `data/context-journal.json` 的 activeProblems
+   - 如该问题不在 knowledge-index.json 中，触发知识自检（调研并补充知识库）
+   - 回复末尾附上说明：已记录该问题，后续会持续跟进

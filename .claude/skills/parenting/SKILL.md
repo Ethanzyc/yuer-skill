@@ -144,6 +144,13 @@ L2/L3 问题自动记录到 `data/advice-tracking.json`：
 
 **【主动提醒】**（如有）月龄发展提醒 / 追踪跟进提醒 / 季节提醒
 
+5. **问题捕获**：回顾对话中用户是否提到了新的育儿问题或困扰。如果有：
+   - 按 ask 模式的问题分层逻辑判断 L1/L2/L3
+   - L2/L3 问题记录到 `data/advice-tracking.json`（records + followUps）
+   - 更新 `data/context-journal.json` 的 activeProblems
+   - 如果该问题不在 `references/knowledge-index.json` 中，触发知识自检逻辑（调研并补充知识库）
+   - 在当次回复末尾附上简要说明：「我注意到你提到了 XX 问题，已经帮你记录，后续会持续跟进。」
+
 ## 上下文管理
 
 ### 对话中更新

@@ -73,8 +73,12 @@ const sortedCategories = Object.keys(grouped).sort((a, b) => {
             <div class="space-y-3">
               {grouped[category].map(problem => {
                 const lc = levelConfig[problem.level] || levelConfig.L1;
+                const slug = problem.primaryResource.replace(/\.md$/, '');
                 return (
-                  <div class="flex items-start justify-between gap-3">
+                  <a
+                    href={`/docs/${slug}`}
+                    class="flex items-start justify-between gap-3 p-2 -mx-2 rounded-lg hover:bg-stone-50 transition-colors cursor-pointer group"
+                  >
                     <div class="flex-1">
                       <div class="flex flex-wrap gap-1.5">
                         {problem.keywords.map(kw => (
@@ -82,12 +86,12 @@ const sortedCategories = Object.keys(grouped).sort((a, b) => {
                         ))}
                       </div>
                       <p class="text-xs text-gray-400 mt-1">
-                        {problem.primaryResource}
-                        {problem.section ? ` > ${problem.section}` : ''}
+                        {problem.section || slug.replace(/^\d+-/, '')}
                       </p>
                     </div>
                     <span class={`text-xs px-2 py-0.5 rounded-full shrink-0 ${lc.color}`}>{lc.label}</span>
-                  </div>
+                    <svg class="w-4 h-4 text-gray-300 group-hover:text-gray-500 shrink-0 mt-1 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                  </a>
                 );
               })}
             </div>

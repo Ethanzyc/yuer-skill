@@ -1,0 +1,78 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+export function getStaticPaths() {
+  const refDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../.claude/skills/parenting/references');
+  const indexPath = path.join(refDir, 'knowledge-index.json');
+  let slugs: string[] = [];
+  try {
+    const data = JSON.parse(fs.readFileSync(indexPath, 'utf-8'));
+    const resources = new Set(data.problemMap.map((p: any) => p.primaryResource.replace(/\.md$/, '')));
+    slugs = [...resources];
+  } catch {}
+  return slugs.map(slug => ({ params: { slug } }));
+}
+
+const refDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../.claude/skills/parenting/references');
+const { slug } = Astro.params;
+const filePath = path.join(refDir, `${slug}.md`);
+
+let content = '';
+let exists = false;
+
+try {
+  content = fs.readFileSync(filePath, 'utf-8');
+  exists = true;
+} catch {}
+
+function renderMarkdown(md: string): string {
+  let html = md
+    .replace(/^### (.+)$/gm, '<h3 class="text-lg font-semibold text-gray-800 mt-6 mb-2">$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2 class="text-xl font-bold text-gray-800 mt-8 mb-3">$1</h2>')
+    .replace(/^# (.+)$/gm, '<h1 class="text-2xl font-bold text-gray-900 mb-4">$1</h1>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/^- (.+)$/gm, '<li class="ml-4 list-disc text-gray-700">$1</li>')
+    .replace(/^> (.+)$/gm, '<blockquote class="border-l-4 border-[#8D6E63] pl-4 py-1 my-3 bg-[#8D6E63]/5 text-gray-700 italic">$1</blockquote>')
+    .replace(/\n{2,}/g, '<br/><br/>')
+    .replace(/\n/g, '<br/>');
+
+  // Wrap consecutive <li> in <ul>
+  html = html.replace(/((?:<li[^>]*>.*?<\/li><br\/?>)+)/g, (match) => {
+    const items = match.replace(/<br\/?>/g, '');
+    return `<ul class="my-2 space-y-1">${items}</ul>`;
+  });
+
+  return html;
+}
+---
+
+<BaseLayout title={exists ? slug.replace(/^\d+-/, '') : '文档未找到'} currentPath="/problems">
+  {exists ? (
+    <div>
+      <a href="/problems" class="inline-flex items-center gap-1 text-sm text-[#8D6E63] hover:underline mb-4">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        返回问题速查
+      </a>
+      <article class="prose prose-stone max-w-none bg-white rounded-xl p-6 shadow-sm border border-stone-200">
+        <Fragment set:html={renderMarkdown(content)} />
+      </article>
+    </div>
+  ) : (
+    <div class="text-center py-20">
+      <div class="w-20 h-20 mx-auto mb-6 bg-stone-100 rounded-full flex items-center justify-center">
+        <svg class="w-10 h-10 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+      </div>
+      <h1 class="text-xl font-bold text-gray-800 mb-2">文档尚未创建</h1>
+      <p class="text-gray-500 mb-1">参考文档 <code class="px-1.5 py-0.5 bg-stone-100 rounded text-xs font-mono">{slug}.md</code> 还不存在</p>
+      <p class="text-sm text-gray-400">使用 <code class="px-1 py-0.5 bg-stone-100 rounded text-xs font-mono">/yuer-ask</code> 提问后，系统会自动积累内容</p>
+      <a href="/problems" class="inline-flex items-center gap-1 text-sm text-[#8D6E63] hover:underline mt-6">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        返回问题速查
+      </a>
+    </div>
+  )}
+</BaseLayout>
